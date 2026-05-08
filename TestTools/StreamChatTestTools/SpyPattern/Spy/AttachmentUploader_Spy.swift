@@ -1,0 +1,49 @@
+//
+// Copyright © 2026 Stream.io Inc. All rights reserved.
+//
+
+import Foundation
+import StreamChat
+
+final class AttachmentUploader_Spy: AttachmentUploader, Spy {
+    let spyState = SpyState()
+
+    var uploadAttachmentProgress: Double?
+    var uploadAttachmentResult: Result<UploadedAttachment, Error>?
+
+    func upload(
+        _ attachment: AnyChatMessageAttachment,
+        progress: ((Double) -> Void)?,
+        completion: @escaping (Result<UploadedAttachment, Error>) -> Void
+    ) {
+        record()
+
+        if let uploadAttachmentProgress = uploadAttachmentProgress {
+            progress?(uploadAttachmentProgress)
+        }
+
+        if let uploadAttachmentResult = uploadAttachmentResult {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                completion(uploadAttachmentResult)
+            }
+        }
+    }
+    
+    func uploadStandaloneAttachment<Payload>(
+        _ attachment: StreamAttachment<Payload>,
+        progress: ((Double) -> Void)?,
+        completion: @escaping (Result<UploadedFile, any Error>) -> Void
+    ) {
+        record()
+
+        if let uploadAttachmentProgress = uploadAttachmentProgress {
+            progress?(uploadAttachmentProgress)
+        }
+
+        if let uploadAttachmentResult = uploadAttachmentResult {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                completion(uploadAttachmentResult.map { UploadedFile(fileURL: $0.remoteURL) })
+            }
+        }
+    }
+}

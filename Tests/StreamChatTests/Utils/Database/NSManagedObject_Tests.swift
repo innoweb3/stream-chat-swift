@@ -1,0 +1,26 @@
+//
+// Copyright © 2026 Stream.io Inc. All rights reserved.
+//
+
+import CoreData
+@testable import StreamChat
+@testable import StreamChatTestTools
+import XCTest
+
+final class NSManagedObject_Tests: XCTestCase {
+    func test_entityName_default() {
+        XCTAssertEqual(EntityWithDefaultName.entityName, "EntityWithDefaultName")
+    }
+
+    func test_entityName_custom() {
+        XCTAssertEqual(EntityWithCustomName.entityName, "CustomName")
+    }
+}
+
+// MARK: Test Helpers
+
+private class EntityWithDefaultName: NSManagedObject {}
+
+private class EntityWithCustomName: NSManagedObject {
+    override class var entityName: String { "CustomName" }
+}

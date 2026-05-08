@@ -1,0 +1,627 @@
+//
+// Copyright © 2026 Stream.io Inc. All rights reserved.
+//
+
+import Foundation
+
+/// Triggered when a new message is sent to a channel the current user is member of.
+public final class NotificationMessageNewEvent: ChannelSpecificEvent, HasUnreadCount {
+    /// The identifier of a channel a message is sent to.
+    public var cid: ChannelId { channel.cid }
+
+    /// The channel a message was sent to.
+    public let channel: ChatChannel
+
+    /// The sent message.
+    public let message: ChatMessage
+
+    /// The event timestamp.
+    public let createdAt: Date
+
+    /// The unread counts of the current user.
+    public let unreadCount: UnreadCount?
+
+    init(channel: ChatChannel, message: ChatMessage, createdAt: Date, unreadCount: UnreadCount?) {
+        self.channel = channel
+        self.message = message
+        self.createdAt = createdAt
+        self.unreadCount = unreadCount
+    }
+}
+
+class NotificationMessageNewEventDTO: EventDTO {
+    let channel: ChannelDetailPayload
+    let message: MessagePayload
+    let unreadCount: UnreadCountPayload?
+    let createdAt: Date
+    let payload: EventPayload
+
+    init(from response: EventPayload) throws {
+        channel = try response.value(at: \.channel)
+        message = try response.value(at: \.message)
+        createdAt = try response.value(at: \.createdAt)
+        unreadCount = try? response.value(at: \.unreadCount)
+        payload = response
+    }
+
+    func toDomainEvent(session: DatabaseSession) -> Event? {
+        guard
+            let channelDTO = session.channel(cid: channel.cid),
+            let messageDTO = session.message(id: message.id),
+            let currentUser = session.currentUser
+        else { return nil }
+
+        return try? NotificationMessageNewEvent(
+            channel: channelDTO.asModel(),
+            message: messageDTO.asModel(),
+            createdAt: createdAt,
+            unreadCount: UnreadCount(currentUserDTO: currentUser)
+        )
+    }
+}
+
+/// Triggered when all channels the current user is member of are marked as read.
+public final class NotificationMarkAllReadEvent: Event, HasUnreadCount {
+    /// The current user.
+    public let user: ChatUser
+
+    /// The unread counts of the current user.
+    public let unreadCount: UnreadCount?
+
+    /// The event timestamp.
+    public let createdAt: Date
+
+    init(user: ChatUser, unreadCount: UnreadCount?, createdAt: Date) {
+        self.user = user
+        self.unreadCount = unreadCount
+        self.createdAt = createdAt
+    }
+}
+
+class NotificationMarkAllReadEventDTO: EventDTO {
+    let user: UserPayload
+    let unreadCount: UnreadCountPayload
+    let createdAt: Date
+    let payload: EventPayload
+
+    init(from response: EventPayload) throws {
+        user = try response.value(at: \.user)
+        createdAt = try response.value(at: \.createdAt)
+        unreadCount = try response.value(at: \.unreadCount)
+        payload = response
+    }
+
+    func toDomainEvent(session: DatabaseSession) -> Event? {
+        guard let userDTO = session.user(id: user.id) else { return nil }
+        guard let currentUser = session.currentUser else { return nil }
+
+        return try? NotificationMarkAllReadEvent(
+            user: userDTO.asModel(),
+            unreadCount: UnreadCount(currentUserDTO: currentUser),
+            createdAt: createdAt
+        )
+    }
+}
+
+/// Triggered when a channel the current user is member of is marked as read.
+public final class NotificationMarkReadEvent: ChannelSpecificEvent, HasUnreadCount {
+    /// The current user.
+    public let user: ChatUser
+
+    /// The read channel identifier.
+    public let cid: ChannelId
+
+    /// The unread counts of the current user.
+    public let unreadCount: UnreadCount?
+
+    /// The id of the last read message id
+    public let lastReadMessageId: MessageId?
+
+    /// The event timestamp.
+    public let createdAt: Date
+
+    init(user: ChatUser, cid: ChannelId, unreadCount: UnreadCount?, lastReadMessageId: MessageId?, createdAt: Date) {
+        self.user = user
+        self.cid = cid
+        self.unreadCount = unreadCount
+        self.lastReadMessageId = lastReadMessageId
+        self.createdAt = createdAt
+    }
+}
+
+/// Triggered when a channel the current user is member of is marked as unread.
+public final class NotificationMarkUnreadEvent: ChannelSpecificEvent {
+    /// The current user.
+    public let user: ChatUser
+
+    /// The read channel identifier.
+    public let cid: ChannelId
+
+    /// The event timestamp.
+    public let createdAt: Date
+
+    /// The id of the first unread message id
+    public let firstUnreadMessageId: MessageId
+
+    /// The id of the last read message id
+    public let lastReadMessageId: MessageId?
+
+    /// The timestamp of the last read message
+    public let lastReadAt: Date
+
+    /// The unread counts of the current user.
+    public let unreadCount: UnreadCount
+
+    /// The number of unread messages for the channel
+    public let unreadMessagesCount: Int
+
+    init(user: ChatUser, cid: ChannelId, createdAt: Date, firstUnreadMessageId: MessageId, lastReadMessageId: MessageId?, lastReadAt: Date, unreadCount: UnreadCount, unreadMessagesCount: Int) {
+        self.user = user
+        self.cid = cid
+        self.createdAt = createdAt
+        self.firstUnreadMessageId = firstUnreadMessageId
+        self.lastReadMessageId = lastReadMessageId
+        self.lastReadAt = lastReadAt
+        self.unreadCount = unreadCount
+        self.unreadMessagesCount = unreadMessagesCount
+    }
+}
+
+class NotificationMarkReadEventDTO: EventDTO {
+    let user: UserPayload
+    let cid: ChannelId
+    let unreadCount: UnreadCountPayload
+    let createdAt: Date
+    let lastReadMessageId: MessageId?
+    let payload: EventPayload
+
+    init(from response: EventPayload) throws {
+        user = try response.value(at: \.user)
+        cid = try response.value(at: \.cid)
+        createdAt = try response.value(at: \.createdAt)
+        unreadCount = try response.value(at: \.unreadCount)
+        lastReadMessageId = try? response.value(at: \.lastReadMessageId)
+        payload = response
+    }
+
+    func toDomainEvent(session: DatabaseSession) -> Event? {
+        guard let userDTO = session.user(id: user.id) else { return nil }
+        guard let currentUser = session.currentUser else { return nil }
+
+        return try? NotificationMarkReadEvent(
+            user: userDTO.asModel(),
+            cid: cid,
+            unreadCount: UnreadCount(currentUserDTO: currentUser),
+            lastReadMessageId: lastReadMessageId,
+            createdAt: createdAt
+        )
+    }
+}
+
+class NotificationMarkUnreadEventDTO: EventDTO {
+    let user: UserPayload
+    let cid: ChannelId
+    let createdAt: Date
+    let firstUnreadMessageId: MessageId
+    let lastReadMessageId: MessageId?
+    let lastReadAt: Date
+    let unreadCount: UnreadCountPayload
+    let unreadMessagesCount: Int
+    let payload: EventPayload
+
+    init(from response: EventPayload) throws {
+        user = try response.value(at: \.user)
+        cid = try response.value(at: \.cid)
+        createdAt = try response.value(at: \.createdAt)
+        firstUnreadMessageId = try response.value(at: \.firstUnreadMessageId)
+        lastReadMessageId = try? response.value(at: \.lastReadMessageId)
+        lastReadAt = try response.value(at: \.lastReadAt)
+        unreadMessagesCount = try response.value(at: \.unreadMessagesCount)
+        unreadCount = try response.value(at: \.unreadCount)
+        payload = response
+    }
+
+    func toDomainEvent(session: DatabaseSession) -> Event? {
+        guard let userDTO = session.user(id: user.id) else { return nil }
+        guard let currentUser = session.currentUser else { return nil }
+
+        return try? NotificationMarkUnreadEvent(
+            user: userDTO.asModel(),
+            cid: cid,
+            createdAt: createdAt,
+            firstUnreadMessageId: firstUnreadMessageId,
+            lastReadMessageId: lastReadMessageId,
+            lastReadAt: lastReadAt,
+            unreadCount: UnreadCount(currentUserDTO: currentUser),
+            unreadMessagesCount: unreadMessagesCount
+        )
+    }
+}
+
+/// Triggered when current user mutes/unmutes a user.
+public final class NotificationMutesUpdatedEvent: Event {
+    /// The current user.
+    public let currentUser: CurrentChatUser
+
+    /// The event timestamp.
+    public let createdAt: Date
+
+    init(currentUser: CurrentChatUser, createdAt: Date) {
+        self.currentUser = currentUser
+        self.createdAt = createdAt
+    }
+}
+
+class NotificationMutesUpdatedEventDTO: EventDTO {
+    let currentUser: CurrentUserPayload
+    let createdAt: Date
+    let payload: EventPayload
+
+    init(from response: EventPayload) throws {
+        currentUser = try response.value(at: \.currentUser)
+        createdAt = try response.value(at: \.createdAt)
+        payload = response
+    }
+
+    func toDomainEvent(session: DatabaseSession) -> Event? {
+        guard let currentUserDTO = session.currentUser else { return nil }
+
+        return try? NotificationMutesUpdatedEvent(
+            currentUser: currentUserDTO.asModel(),
+            createdAt: createdAt
+        )
+    }
+}
+
+/// Triggered when the current user is added to the channel member list.
+public final class NotificationAddedToChannelEvent: ChannelSpecificEvent, HasUnreadCount {
+    /// The identifier of a channel a message is sent to.
+    public var cid: ChannelId { channel.cid }
+
+    /// The channel the current user was added to.
+    public let channel: ChatChannel
+
+    /// The unread counts of the current user.
+    public let unreadCount: UnreadCount?
+
+    /// The membership information of the current user.
+    public let member: ChatChannelMember
+
+    /// The event timestamp.
+    public let createdAt: Date
+
+    init(channel: ChatChannel, unreadCount: UnreadCount?, member: ChatChannelMember, createdAt: Date) {
+        self.channel = channel
+        self.unreadCount = unreadCount
+        self.member = member
+        self.createdAt = createdAt
+    }
+}
+
+class NotificationAddedToChannelEventDTO: EventDTO {
+    let channel: ChannelDetailPayload
+    let unreadCount: UnreadCountPayload?
+    // This `member` field is equal to the `membership` field in channel query
+    let member: MemberPayload
+    let createdAt: Date
+    let payload: EventPayload
+
+    init(from response: EventPayload) throws {
+        channel = try response.value(at: \.channel)
+        unreadCount = try? response.value(at: \.unreadCount)
+        member = try response.value(at: \.memberContainer?.member)
+        createdAt = try response.value(at: \.createdAt)
+        payload = response
+    }
+
+    func toDomainEvent(session: DatabaseSession) -> Event? {
+        guard
+            let channelDTO = session.channel(cid: channel.cid),
+            let memberDTO = session.member(userId: member.userId, cid: channel.cid),
+            let currentUser = session.currentUser
+        else { return nil }
+
+        return try? NotificationAddedToChannelEvent(
+            channel: channelDTO.asModel(),
+            unreadCount: UnreadCount(currentUserDTO: currentUser),
+            member: memberDTO.asModel(),
+            createdAt: createdAt
+        )
+    }
+}
+
+/// Triggered when the current user is removed from a channel member list.
+public final class NotificationRemovedFromChannelEvent: ChannelSpecificEvent {
+    /// The user who removed the current user from channel members.
+    public let user: ChatUser
+
+    /// The channel identifier the current user was removed from.
+    public let cid: ChannelId
+
+    /// The current user.
+    public let member: ChatChannelMember
+
+    /// The event timestamp.
+    public let createdAt: Date
+
+    init(user: ChatUser, cid: ChannelId, member: ChatChannelMember, createdAt: Date) {
+        self.user = user
+        self.cid = cid
+        self.member = member
+        self.createdAt = createdAt
+    }
+}
+
+class NotificationRemovedFromChannelEventDTO: EventDTO {
+    let cid: ChannelId
+    let user: UserPayload
+    // This `member` field is equal to the `membership` field in channel query
+    let member: MemberPayload
+    let createdAt: Date
+    let payload: EventPayload
+
+    init(from response: EventPayload) throws {
+        cid = try response.value(at: \.cid)
+        user = try response.value(at: \.user)
+        member = try response.value(at: \.memberContainer?.member)
+        createdAt = try response.value(at: \.createdAt)
+        payload = response
+    }
+
+    func toDomainEvent(session: DatabaseSession) -> Event? {
+        guard
+            let userDTO = session.user(id: user.id),
+            let memberDTO = session.member(userId: member.userId, cid: cid)
+        else { return nil }
+
+        return try? NotificationRemovedFromChannelEvent(
+            user: userDTO.asModel(),
+            cid: cid,
+            member: memberDTO.asModel(),
+            createdAt: createdAt
+        )
+    }
+}
+
+/// Triggered when current user mutes/unmutes a channel.
+public final class NotificationChannelMutesUpdatedEvent: Event {
+    /// The current user.
+    public let currentUser: CurrentChatUser
+
+    /// The event timestamp.
+    public let createdAt: Date
+
+    init(currentUser: CurrentChatUser, createdAt: Date) {
+        self.currentUser = currentUser
+        self.createdAt = createdAt
+    }
+}
+
+class NotificationChannelMutesUpdatedEventDTO: EventDTO {
+    let currentUser: CurrentUserPayload
+    let createdAt: Date
+    let payload: EventPayload
+
+    init(from response: EventPayload) throws {
+        currentUser = try response.value(at: \.currentUser)
+        createdAt = try response.value(at: \.createdAt)
+        payload = response
+    }
+
+    func toDomainEvent(session: DatabaseSession) -> Event? {
+        guard let currentUserDTO = session.currentUser else { return nil }
+
+        return try? NotificationChannelMutesUpdatedEvent(
+            currentUser: currentUserDTO.asModel(),
+            createdAt: createdAt
+        )
+    }
+}
+
+/// Triggered when current user is invited to a channel.
+public final class NotificationInvitedEvent: MemberEvent, ChannelSpecificEvent {
+    /// The inviter.
+    public let user: ChatUser
+
+    /// The channel identifier the current user was invited to.
+    public let cid: ChannelId
+
+    /// The membership information of the current user.
+    public let member: ChatChannelMember
+
+    /// The event timestamp.
+    public let createdAt: Date
+
+    init(user: ChatUser, cid: ChannelId, member: ChatChannelMember, createdAt: Date) {
+        self.user = user
+        self.cid = cid
+        self.member = member
+        self.createdAt = createdAt
+    }
+}
+
+class NotificationInvitedEventDTO: EventDTO {
+    let user: UserPayload
+    let cid: ChannelId
+    // This `member` field is equal to the `membership` field in channel query
+    let member: MemberPayload
+    let createdAt: Date
+    let payload: EventPayload
+
+    init(from response: EventPayload) throws {
+        user = try response.value(at: \.user)
+        cid = try response.value(at: \.cid)
+        member = try response.value(at: \.memberContainer?.member)
+        createdAt = try response.value(at: \.createdAt)
+        payload = response
+    }
+
+    func toDomainEvent(session: DatabaseSession) -> Event? {
+        guard
+            let userDTO = session.user(id: user.id),
+            let memberDTO = session.member(userId: member.userId, cid: cid)
+        else { return nil }
+
+        return try? NotificationInvitedEvent(
+            user: userDTO.asModel(),
+            cid: cid,
+            member: memberDTO.asModel(),
+            createdAt: createdAt
+        )
+    }
+}
+
+/// Triggered when the current user accepts an invite to a channel.
+public final class NotificationInviteAcceptedEvent: MemberEvent, ChannelSpecificEvent {
+    /// The inviter.
+    public let user: ChatUser
+
+    /// The channel identifier the current user has become a member of.
+    public var cid: ChannelId { channel.cid }
+
+    /// The channel the current user has become a member of.
+    public let channel: ChatChannel
+
+    /// The membership information of the current user.
+    public let member: ChatChannelMember
+
+    /// The event timestamp.
+    public let createdAt: Date
+
+    init(user: ChatUser, channel: ChatChannel, member: ChatChannelMember, createdAt: Date) {
+        self.user = user
+        self.channel = channel
+        self.member = member
+        self.createdAt = createdAt
+    }
+}
+
+class NotificationInviteAcceptedEventDTO: EventDTO {
+    let user: UserPayload
+    let channel: ChannelDetailPayload
+    // This `member` field is equal to the `membership` field in channel query
+    let member: MemberPayload
+    let createdAt: Date
+    let payload: EventPayload
+
+    init(from response: EventPayload) throws {
+        user = try response.value(at: \.user)
+        channel = try response.value(at: \.channel)
+        member = try response.value(at: \.memberContainer?.member)
+        createdAt = try response.value(at: \.createdAt)
+        payload = response
+    }
+
+    func toDomainEvent(session: DatabaseSession) -> Event? {
+        guard
+            let userDTO = session.user(id: user.id),
+            let channelDTO = session.channel(cid: channel.cid),
+            let memberDTO = session.member(userId: member.userId, cid: channel.cid)
+        else { return nil }
+
+        return try? NotificationInviteAcceptedEvent(
+            user: userDTO.asModel(),
+            channel: channelDTO.asModel(),
+            member: memberDTO.asModel(),
+            createdAt: createdAt
+        )
+    }
+}
+
+/// Triggered when the current user rejects an invite to a channel.
+public final class NotificationInviteRejectedEvent: MemberEvent, ChannelSpecificEvent {
+    /// The inviter.
+    public let user: ChatUser
+
+    /// The channel identifier the current user has rejected an intivation to.
+    public var cid: ChannelId { channel.cid }
+
+    /// The channel the current user has rejected an intivation to.
+    public let channel: ChatChannel
+
+    /// The membership information of the current user.
+    public let member: ChatChannelMember
+
+    /// The event timestamp.
+    public let createdAt: Date
+
+    init(user: ChatUser, channel: ChatChannel, member: ChatChannelMember, createdAt: Date) {
+        self.user = user
+        self.channel = channel
+        self.member = member
+        self.createdAt = createdAt
+    }
+}
+
+class NotificationInviteRejectedEventDTO: EventDTO {
+    let user: UserPayload
+    let channel: ChannelDetailPayload
+    // This `member` field is equal to the `membership` field in channel query
+    let member: MemberPayload
+    let createdAt: Date
+    let payload: EventPayload
+
+    init(from response: EventPayload) throws {
+        user = try response.value(at: \.user)
+        channel = try response.value(at: \.channel)
+        member = try response.value(at: \.memberContainer?.member)
+        createdAt = try response.value(at: \.createdAt)
+        payload = response
+    }
+
+    func toDomainEvent(session: DatabaseSession) -> Event? {
+        guard
+            let userDTO = session.user(id: user.id),
+            let channelDTO = session.channel(cid: channel.cid),
+            let memberDTO = session.member(userId: member.userId, cid: channel.cid)
+        else { return nil }
+
+        return try? NotificationInviteRejectedEvent(
+            user: userDTO.asModel(),
+            channel: channelDTO.asModel(),
+            member: memberDTO.asModel(),
+            createdAt: createdAt
+        )
+    }
+}
+
+/// Triggered when a channel is deleted, this event is delivered to all channel members
+public final class NotificationChannelDeletedEvent: ChannelSpecificEvent {
+    /// The cid of the deleted channel
+    public let cid: ChannelId
+
+    /// The channel that was deleted
+    public let channel: ChatChannel
+
+    /// The event timestamp.
+    public let createdAt: Date
+
+    init(cid: ChannelId, channel: ChatChannel, createdAt: Date) {
+        self.cid = cid
+        self.channel = channel
+        self.createdAt = createdAt
+    }
+}
+
+class NotificationChannelDeletedEventDTO: EventDTO {
+    let cid: ChannelId
+    let channel: ChannelDetailPayload
+    let createdAt: Date
+    let payload: EventPayload
+
+    init(from response: EventPayload) throws {
+        cid = try response.value(at: \.cid)
+        channel = try response.value(at: \.channel)
+        createdAt = try response.value(at: \.createdAt)
+        payload = response
+    }
+
+    func toDomainEvent(session: DatabaseSession) -> Event? {
+        guard let channelDTO = session.channel(cid: channel.cid) else { return nil }
+        return try? NotificationChannelDeletedEvent(
+            cid: cid,
+            channel: channelDTO.asModel(),
+            createdAt: createdAt
+        )
+    }
+}
