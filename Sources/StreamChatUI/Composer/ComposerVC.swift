@@ -1849,7 +1849,7 @@ open class ComposerVC: _ViewController,
     /// results are returned sorted by their edit distance from the searched string
     /// distance is calculated using the levenshtein algorithm
     /// both search and name strings are normalized (lowercased and by replacing diacritics)
-    func searchUsers(_ users: [ChatUser], by searchInput: String, excludingId: String? = nil) -> [ChatUser] {
+    public func searchUsers(_ users: [ChatUser], by searchInput: String, excludingId: String? = nil) -> [ChatUser] {
         let normalize: (String) -> String = {
             $0.lowercased().folding(options: .diacriticInsensitive, locale: .current)
         }
