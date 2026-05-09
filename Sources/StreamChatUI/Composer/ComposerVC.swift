@@ -1251,15 +1251,15 @@ open class ComposerVC: _ViewController,
 
         // Because we re-create the ChatMessageComposerSuggestionsMentionDataSource always from scratch
         // We lose the results of the previous search query, so we need to provide it manually.
-        let initialUsers: (String, [ChatUser]) -> [ChatUser] = { previousQuery, previousResult in
-            if typingMention.isEmpty {
-                return []
-            }
-            if typingMention.hasPrefix(previousQuery) || previousQuery.hasPrefix(typingMention) {
-                return previousResult
-            }
-            return []
-        }
+//        let initialUsers: (String, [ChatUser]) -> [ChatUser] = { previousQuery, previousResult in
+//            if typingMention.isEmpty {
+//                return []
+//            }
+//            if typingMention.hasPrefix(previousQuery) || previousQuery.hasPrefix(typingMention) {
+//                return previousResult
+//            }
+//            return []
+//        }
 
         if mentionAllAppUsers {
             var previousResult = userSearchController.userArray
@@ -1276,7 +1276,7 @@ open class ComposerVC: _ViewController,
                 collectionView: suggestionsVC.collectionView,
                 searchController: userSearchController,
                 memberListController: nil,
-                initialUsers: initialUsers(previousQuery, previousResult)
+                initialUsers: initialUsers(typingMention: typingMention, previousQuery: previousQuery, previousResult: previousResult)
             )
         }
 
@@ -1295,7 +1295,7 @@ open class ComposerVC: _ViewController,
                 collectionView: suggestionsVC.collectionView,
                 searchController: userSearchController,
                 memberListController: memberListController,
-                initialUsers: initialUsers(previousQuery, previousResult)
+                initialUsers: initialUsers(typingMention: typingMention, previousQuery: previousQuery, previousResult: previousResult)
             )
         }
 
@@ -1310,6 +1310,16 @@ open class ComposerVC: _ViewController,
             memberListController: nil,
             initialUsers: usersCache
         )
+    }
+    
+    public func initialUsers(typingMention: String, previousQuery: String, previousResult: [ChatUser]) -> [ChatUser] {
+        if typingMention.isEmpty {
+            return []
+        }
+        if typingMention.hasPrefix(previousQuery) || previousQuery.hasPrefix(typingMention) {
+            return previousResult
+        }
+        return []
     }
 
     /// Provides the mention text for composer text field, when the user selects a mention suggestion.
@@ -1834,33 +1844,33 @@ open class ComposerVC: _ViewController,
             }
         }
     }
-}
-
-/// searchUsers does an autocomplete search on a list of ChatUser and returns users with `id` or `name` containing the search string
-/// results are returned sorted by their edit distance from the searched string
-/// distance is calculated using the levenshtein algorithm
-/// both search and name strings are normalized (lowercased and by replacing diacritics)
-func searchUsers(_ users: [ChatUser], by searchInput: String, excludingId: String? = nil) -> [ChatUser] {
-    let normalize: (String) -> String = {
-        $0.lowercased().folding(options: .diacriticInsensitive, locale: .current)
-    }
-
-    let searchInput = normalize(searchInput)
-
-    let matchingUsers = users.filter { $0.id != excludingId }
-        .filter { searchInput.isEmpty || $0.id.contains(searchInput) || (normalize($0.name ?? "").contains(searchInput)) }
-
-    let distance: (ChatUser) -> Int = {
-        min($0.id.levenshtein(searchInput), $0.name?.levenshtein(searchInput) ?? 1000)
-    }
-
-    return Array(Set(matchingUsers)).sorted {
-        /// a tie breaker is needed here to avoid results from flickering
-        let dist = distance($0) - distance($1)
-        if dist == 0 {
-            return $0.id < $1.id
+    
+    /// searchUsers does an autocomplete search on a list of ChatUser and returns users with `id` or `name` containing the search string
+    /// results are returned sorted by their edit distance from the searched string
+    /// distance is calculated using the levenshtein algorithm
+    /// both search and name strings are normalized (lowercased and by replacing diacritics)
+    func searchUsers(_ users: [ChatUser], by searchInput: String, excludingId: String? = nil) -> [ChatUser] {
+        let normalize: (String) -> String = {
+            $0.lowercased().folding(options: .diacriticInsensitive, locale: .current)
         }
-        return dist < 0
+
+        let searchInput = normalize(searchInput)
+
+        let matchingUsers = users.filter { $0.id != excludingId }
+            .filter { searchInput.isEmpty || $0.id.contains(searchInput) || (normalize($0.name ?? "").contains(searchInput)) }
+
+        let distance: (ChatUser) -> Int = {
+            min($0.id.levenshtein(searchInput), $0.name?.levenshtein(searchInput) ?? 1000)
+        }
+
+        return Array(Set(matchingUsers)).sorted {
+            /// a tie breaker is needed here to avoid results from flickering
+            let dist = distance($0) - distance($1)
+            if dist == 0 {
+                return $0.id < $1.id
+            }
+            return dist < 0
+        }
     }
 }
 
