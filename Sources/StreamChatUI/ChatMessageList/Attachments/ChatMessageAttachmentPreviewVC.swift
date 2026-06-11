@@ -27,14 +27,14 @@ open class ChatMessageAttachmentPreviewVC: _ViewController, WKNavigationDelegate
         action: #selector(close)
     )
 
-    private lazy var goBackButton = UIBarButtonItem(
+    lazy var goBackButton = UIBarButtonItem(
         image: appearance.images.chevronLeft,
         style: .plain,
         target: self,
         action: #selector(goBack)
     )
 
-    private lazy var goForwardButton = UIBarButtonItem(
+    lazy var goForwardButton = UIBarButtonItem(
         image: appearance.images.chevronRight,
         style: .plain,
         target: self,
@@ -106,7 +106,7 @@ open class ChatMessageAttachmentPreviewVC: _ViewController, WKNavigationDelegate
         activityIndicatorView.startAnimating()
     }
 
-    public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+    open func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         activityIndicatorView.stopAnimating()
 
         webView.evaluateJavaScript("document.title") { data, _ in
