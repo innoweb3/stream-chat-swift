@@ -20,21 +20,21 @@ open class ChatMessageAttachmentPreviewVC: _ViewController, WKNavigationDelegate
     public private(set) lazy var activityIndicatorView = UIActivityIndicatorView(style: .medium)
         .withAccessibilityIdentifier(identifier: "activityIndicatorView")
 
-    private lazy var closeButton = UIBarButtonItem(
+    public lazy var closeButton = UIBarButtonItem(
         image: appearance.images.close,
         style: .plain,
         target: self,
         action: #selector(close)
     )
 
-    lazy var goBackButton = UIBarButtonItem(
+    public lazy var goBackButton = UIBarButtonItem(
         image: appearance.images.chevronLeft,
         style: .plain,
         target: self,
         action: #selector(goBack)
     )
 
-    lazy var goForwardButton = UIBarButtonItem(
+    public lazy var goForwardButton = UIBarButtonItem(
         image: appearance.images.chevronRight,
         style: .plain,
         target: self,
