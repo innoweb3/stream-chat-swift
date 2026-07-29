@@ -405,6 +405,7 @@ open class ChatMessageContentView: _View, ThemeProvider, UITextViewDelegate {
         if options.contains(.flipped) {
             footnoteSubviews = footnoteSubviews.reversed()
         }
+        
 //        if options.contains(.translation) {
 //            footnoteSubviews.append(createTranslationLabel())
 //        }
@@ -592,6 +593,7 @@ open class ChatMessageContentView: _View, ThemeProvider, UITextViewDelegate {
 
     override open func updateContent() {
         super.updateContent()
+        
         defer {
             attachmentViewInjector?.contentViewDidUpdateContent()
             previousContentUpdateTintColor = tintColor
