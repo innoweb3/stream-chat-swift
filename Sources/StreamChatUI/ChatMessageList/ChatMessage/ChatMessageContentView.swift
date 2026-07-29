@@ -405,9 +405,9 @@ open class ChatMessageContentView: _View, ThemeProvider, UITextViewDelegate {
         if options.contains(.flipped) {
             footnoteSubviews = footnoteSubviews.reversed()
         }
-        if options.contains(.translation) {
-            footnoteSubviews.append(createTranslationLabel())
-        }
+//        if options.contains(.translation) {
+//            footnoteSubviews.append(createTranslationLabel())
+//        }
 
         let shouldRenderSpacer = attachmentViewInjector?.fillAllAvailableWidth == true
         let spacer = UIView.spacer(axis: .horizontal)
@@ -601,15 +601,15 @@ open class ChatMessageContentView: _View, ThemeProvider, UITextViewDelegate {
         var text = content?.textContent ?? ""
 
         // Translated text
-        if layoutOptions?.contains(.translation) == true,
-           let currentUserLang = channel?.membership?.language,
-           let translatedText = content?.translatedText(for: currentUserLang) {
-            text = translatedText
-
-            if let languageText = Locale.current.localizedString(forLanguageCode: currentUserLang.languageCode) {
-                translationLabel?.text = L10n.Message.translatedTo(languageText)
-            }
-        }
+//        if layoutOptions?.contains(.translation) == true,
+//           let currentUserLang = channel?.membership?.language,
+//           let translatedText = content?.translatedText(for: currentUserLang) {
+//            text = translatedText
+//
+//            if let languageText = Locale.current.localizedString(forLanguageCode: currentUserLang.languageCode) {
+//                translationLabel?.text = L10n.Message.translatedTo(languageText)
+//            }
+//        }
 
         // Set the text content
         if textView?.text != text {
