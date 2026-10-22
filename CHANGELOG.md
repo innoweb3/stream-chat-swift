@@ -4,6 +4,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 # Upcoming
 
 ### 🔄 Changed
+- Process `StreamChatModel.xcdatamodeld` as a package resource so Xcode 27 bundles the compiled Core Data model instead of the raw `.xcdatamodeld` (avoids `ChatClient` crash in `DatabaseContainer`).
 
 # [4.99.2](https://github.com/GetStream/stream-chat-swift/releases/tag/4.99.2)
 _May 06, 2026_
